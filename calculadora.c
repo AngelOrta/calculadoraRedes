@@ -7,9 +7,11 @@
 #include<unistd.h>
 #include<setjmp.h>
 #include<ctype.h>
+#include<stdint.h>
 
-void interfaz(char *direccion, int *mascara, int *mascaraOpci);
-int ipValida(char *direccion);
+void interfaz(char *direccionD, int *mascaraD, int *mascaraOpciD, int *mascara);
+void generarMascara(int *mascara, int bitsD);
+int ipValida(char *direccionD);
 int esNumero(char *caracter);
 int puntosSeguidos(char *caracter);
 int mascaraValida(int d);
@@ -20,9 +22,10 @@ jmp_buf inicio;
 char *progname;
 
 int main(int argc, char *argv[]){
-    char opcion;
-	char direccion[17]; //Direccion de un host o red
-    int mascara,mascaraOpci,i=0;
+    char opcionD;
+	char direccionD[17]; //direccionD de un host o red
+    int mascara[4];
+    int mascaraD,mascaraOpciD,i=0;
     progname=argv[0];
     //Empieza Calculadora
     do{
@@ -30,19 +33,19 @@ int main(int argc, char *argv[]){
         if(i!=0)
             limpiaBufferIn(); //Para el getchar
         setjmp(inicio);
-        interfaz(direccion,&mascara,&mascaraOpci);
+        interfaz(direccionD,&mascaraD,&mascaraOpciD,mascara);
         i++;
-        printf("\n%.15s %d %d",direccion,mascara,mascaraOpci);
+        printf("\n%.15s %d %d %d.%d.%d.%d",direccionD,mascaraD,mascaraOpciD, mascara[0],mascara[1],mascara[2],mascara[3]);
         fflush(stdout);
         printf("\nQuieres probar con otra dirección IP? (S/N): ");
-    }while((opcion=getchar()) == 115 || opcion == 83);
+    }while((opcionD=getchar()) == 115 || opcionD == 83);
     return 0;
 }
 
 
 
 //Imprime la interfaz y captura los datos desde el teclado
-void interfaz(char *direccion, int *mascara, int *mascaraOpci){
+void interfaz(char *direccionD, int *mascaraD, int *mascaraOpciD, int *mascara){
     char opci[4];
     system("clear");
     printf("\033[H\033[2J");
@@ -59,57 +62,59 @@ void interfaz(char *direccion, int *mascara, int *mascaraOpci){
     printf("________________________________|_____________________|________________________|\n");
     printf("\033[2A\033[7C"); //Cursor a primer slot
 
-    if(fgets(direccion, 17, stdin)){
-        if(!ipValida(direccion))
+    if(fgets(direccionD, 17, stdin)){
+        if(!ipValida(direccionD))
             error("Dirección inválida. Espere para empezar de nuevo");
     }
     
     printf("\033[1B\033[20D"); //Cursor a salida
     printf("\033[2A\033[42C"); //Cursor a segundo slot
     
-    scanf("%d",&(*mascara));
+    scanf("%d",&(*mascaraD));
     limpiaBufferIn();
-    if(!mascaraValida(*mascara))
+    if(!mascaraValida(*mascaraD))
         error("Máscara de red inválida. Espere para empezar de nuevo");
+    generarMascara(mascara,*mascaraD);
     printf("\033[1B\033[22D"); //Cursor a salida
     printf("\033[2A\033[60C"); //Cursor a tercer slot
     
     if(fgets(opci,sizeof(opci),stdin)){
-        if(opci[0] == '\n') //No se introdujo mascara opcional
-            *mascaraOpci = -1; 
+        if(opci[0] == '\n') //No se introdujo mascaraD opcional
+            *mascaraOpciD = -1; 
         else{
             if(opci[strlen(opci)-1] != '\n')
                 limpiaBufferIn();
             opci[strlen(opci)-1] = '\0';
             if(esNumero(opci)){
-                *mascaraOpci = atoi(opci);
-                if(!mascaraValida(*mascaraOpci))
+                *mascaraOpciD = atoi(opci);
+                if(!mascaraValida(*mascaraOpciD))
                     error("Máscara de red inválida. Espere para empezar de nuevo");
             }else
                 error("Máscara de red inválida. Espere para empezar de nuevo");
+            generarMascara(mascara,*mascaraOpciD);
         }
     }
     printf("\033[0B\033[22D"); //Cursor a salida
 }
 
-//Valida el formato de la direccion ip ingresada
-int ipValida(char *direccion){
+//Valida el formato de la direccionD ip ingresada
+int ipValida(char *direccionD){
     int octetoN;
     char *octeto, cdireccion[16];
-    if(direccion[strlen(direccion)-1] != '\n'){//Excedio numero caracteres permitidos
+    if(direccionD[strlen(direccionD)-1] != '\n'){//Excedio numero caracteres permitidos
         limpiaBufferIn();
         return 0;
     } 
     
-    direccion[strlen(direccion)-1] = '\0'; //Quitando salto de linea
+    direccionD[strlen(direccionD)-1] = '\0'; //Quitando salto de linea
 
-    if(direccion[0] == '.' || direccion[strlen(direccion)-1] == '.')
+    if(direccionD[0] == '.' || direccionD[strlen(direccionD)-1] == '.')
         return 0;
     
-    if(puntosSeguidos(direccion))   
+    if(puntosSeguidos(direccionD))   
         return 0;
 
-    strcpy(cdireccion,direccion);
+    strcpy(cdireccion,direccionD);
     octeto = strtok(cdireccion,"."); 
     int puntos=0;
     while(octeto!=NULL){  //Para cada componente separado por puntos
@@ -127,6 +132,18 @@ int ipValida(char *direccion){
             return 0;
     }
     return puntos == 3;
+}
+
+//Genera la mascara a partir del dato ingresado
+void generarMascara(int *mascara, int bitsD){
+    uint32_t mascaraCompleta = 0xFFFFFFFF; //llena de 1's
+    mascaraCompleta <<=(32-bitsD);  //desplaza bits
+
+    //Separando los octetos operando con el ultimo octeto luego de desplazarlo
+    mascara[0] = (mascaraCompleta >> 24) & 0xFF;
+    mascara[1] = (mascaraCompleta >> 16) & 0xFF;
+    mascara[2] = (mascaraCompleta >> 8) & 0xFF;
+    mascara[3] = mascaraCompleta & 0xFF;
 }
 
 //Si una cadena esta formada por solo numeros
