@@ -8,8 +8,10 @@
 #include<setjmp.h>
 #include<ctype.h>
 #include<stdint.h>
+#include<math.h>
 
-void interfaz(char *direccionD, int *mascaraD, int *mascaraOpciD, int *mascara);
+void interfaz(char *direccionD, int *mascaraD, int *mascaraOpciD, int *mascara, int *mascaraSub);
+void subneteo(int *mascaraD, int *mascaraOpciD, int *mascara, int *mascaraSub, int *direccionRed);
 void generarMascara(int *mascara, int bitsD);
 int ipValida(char *direccionD);
 int esNumero(char *caracter);
@@ -23,8 +25,8 @@ char *progname;
 
 int main(int argc, char *argv[]){
     char opcionD;
-	char direccionD[17]; //direccionD de un host o red
-    int mascara[4];
+	char direccionD[17]; //(Dato)
+    int mascara[4],mascaraSub[4],direccion[4], direccionRed[]={192,168,100,0};//10,128,0,0
     int mascaraD,mascaraOpciD,i=0;
     progname=argv[0];
     //Empieza Calculadora
@@ -33,10 +35,12 @@ int main(int argc, char *argv[]){
         if(i!=0)
             limpiaBufferIn(); //Para el getchar
         setjmp(inicio);
-        interfaz(direccionD,&mascaraD,&mascaraOpciD,mascara);
+        interfaz(direccionD,&mascaraD,&mascaraOpciD,mascara,mascaraSub);
         i++;
-        printf("\n%.15s %d %d %d.%d.%d.%d",direccionD,mascaraD,mascaraOpciD, mascara[0],mascara[1],mascara[2],mascara[3]);
+        printf("\n%.15s %d %d %d.%d.%d.%d",direccionD,mascaraD,mascaraOpciD, mascaraSub[0],mascaraSub[1],mascaraSub[2],mascaraSub[3]);
         fflush(stdout);
+        if(mascaraOpciD!=-1)
+            subneteo(&mascaraD, &mascaraOpciD, mascara,mascaraSub,direccionRed);
         printf("\nQuieres probar con otra dirección IP? (S/N): ");
     }while((opcionD=getchar()) == 115 || opcionD == 83);
     return 0;
@@ -45,7 +49,7 @@ int main(int argc, char *argv[]){
 
 
 //Imprime la interfaz y captura los datos desde el teclado
-void interfaz(char *direccionD, int *mascaraD, int *mascaraOpciD, int *mascara){
+void interfaz(char *direccionD, int *mascaraD, int *mascaraOpciD, int *mascara, int *mascaraSub){
     char opci[4];
     system("clear");
     printf("\033[H\033[2J");
@@ -91,11 +95,49 @@ void interfaz(char *direccionD, int *mascaraD, int *mascaraOpciD, int *mascara){
                     error("Máscara de red inválida. Espere para empezar de nuevo");
             }else
                 error("Máscara de red inválida. Espere para empezar de nuevo");
-            generarMascara(mascara,*mascaraOpciD);
+            generarMascara(mascaraSub,*mascaraOpciD);
         }
     }
     printf("\033[0B\033[22D"); //Cursor a salida
 }
+
+//Calcula las direcciones de red de todas las subredes y muestra su informacion
+void subneteo(int *mascaraD, int *mascaraOpciD, int *mascara, int *mascaraSub, int *direccionRed){
+    int saltos,indiceSaltos,subredes,i,host;
+    int copiaDRed[4];
+    for(i=0; i<4; i++)
+        copiaDRed[i] = direccionRed[i];
+    printf("\n%d.%d.%d.%d",copiaDRed[0], copiaDRed[1], copiaDRed[2], copiaDRed[3]);
+    subredes = (int)pow((double)2,(double)(*mascaraOpciD-*mascaraD));
+    host =subredes*((int)pow((double)2,(double)(32-*mascaraOpciD))-2);
+    //Para el ultimo octeto que no esta lleno de ceros y en donde se daran los saltos
+    for(i=0; i<4; i++){
+        if(mascaraSub[i] == 0x00){
+            indiceSaltos = i-1;
+            break;
+        }else if(i==3)
+            indiceSaltos = i;
+    }
+    saltos = 256-mascaraSub[indiceSaltos];
+    //Ciclo para generar subredes
+    for(i=0; i<subredes; i++){
+        if(copiaDRed[indiceSaltos] >= 256){ //Para incrementar el octeto anterior
+            copiaDRed[indiceSaltos] = 0;
+            if(copiaDRed[indiceSaltos-1] < 256)
+                copiaDRed[indiceSaltos-1] += 1;
+            else if(copiaDRed[indiceSaltos-2] < 256){
+                copiaDRed[indiceSaltos-1] = 0;
+                copiaDRed[indiceSaltos-2] += 1;
+            }
+        }
+        printf("\nSubred %d:\n\t %d.%d.%d.%d",i+1,copiaDRed[0], copiaDRed[1], copiaDRed[2], copiaDRed[3]);
+        //Llamar aqui a la funcion 
+        copiaDRed[indiceSaltos]+=saltos; 
+        
+    }
+    printf("\n\nSubredes: %d\nHost utilizables: %d",subredes, host);
+}
+
 
 //Valida el formato de la direccionD ip ingresada
 int ipValida(char *direccionD){
