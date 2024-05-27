@@ -55,7 +55,7 @@ int main(int argc, char *argv[]){
         printf("\nHosts utilizables de la red: %d", netHosts);
         fflush(stdout);
         if(mascaraOpciD!=-1)
-            subneteo(&mascaraD, &mascaraOpciD, mascara,mascaraSub,direccion);
+            subneteo(&mascaraD, &mascaraOpciD, mascara,mascaraSub,networkAd);
         printf("\nQuieres probar con otra dirección IP? (S/N): ");
     }while((opcionD=getchar()) == 115 || opcionD == 83);
     return 0;
@@ -124,7 +124,7 @@ void subneteo(int *mascaraD, int *mascaraOpciD, int *mascara, int *mascaraSub, i
     for(i=0; i<4; i++)
         copiaDRed[i] = direccionRed[i];
     printf("\n\n---------------------------------------Subneteo---------------------------------------");
-    printf("\nDirección de Red Original: %d.%d.%d.%d",copiaDRed[0], copiaDRed[1], copiaDRed[2], copiaDRed[3]);
+    //printf("\nDirección de Red Original: %d.%d.%d.%d",copiaDRed[0], copiaDRed[1], copiaDRed[2], copiaDRed[3]);
     printf("\nNueva Máscara de Subred para subneteo:  %d.%d.%d.%d", mascaraSub[0], mascaraSub[1], mascaraSub[2], mascaraSub[3]);
     subredes = (int)pow((double)2,(double)(*mascaraOpciD-*mascaraD));
     host =subredes*((int)pow((double)2,(double)(32-*mascaraOpciD))-2);
