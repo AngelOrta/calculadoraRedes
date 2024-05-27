@@ -48,6 +48,7 @@ int main(int argc, char *argv[]){
         calcBroadcastAd(broadcastAd, direccion, mascara); //se calcula la dir de broadcast
         calcHostNumber(&mascaraD, &netHosts);
         printf("\n%.15s %d.%d.%d.%d %d %d %d.%d.%d.%d",direccionD, direccion[0], direccion[1], direccion[2], direccion[3],mascaraD,mascaraOpciD, mascara[0],mascara[1],mascara[2],mascara[3]);
+        printf("\nDirección IP Original:  %d.%d.%d.%d", direccion[0], direccion[1], direccion[2], direccion[3]);
         printf("\nDirección de Red:  %d.%d.%d.%d", networkAd[0], networkAd[1], networkAd[2], networkAd[3]);
         printf("\nMáscara de Subred:  %d.%d.%d.%d", mascara[0], mascara[1], mascara[2], mascara[3]);
         printf("\nDirección de Broadcast:  %d.%d.%d.%d", broadcastAd[0], broadcastAd[1], broadcastAd[2], broadcastAd[3]);
